@@ -1,0 +1,54 @@
+name: Core3 Mod CI
+
+on:
+  push:
+    branches:
+      - ultrareview-extraction
+  pull_request:
+    branches:
+      - ultrareview-extraction
+
+jobs:
+  lua-syntax:
+    name: Lua syntax (luac -p)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua 5.3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3
+
+      - name: Syntax-check every .lua under bin/scripts
+        run: |
+          set -e
+          FAIL=0
+          while IFS= read -r -d '' f; do
+            if ! luac5.3 -p "$f"; then
+              echo "FAIL: $f"
+              FAIL=1
+            fi
+          done < <(find MMOCoreORB/bin/scripts -type f -name '*.lua' -print0)
+          if [ $FAIL -ne 0 ]; then
+            exit 1
+          fi
+          echo "All Lua files passed luac -p."
+
+  # C++ build is deferred until after Patch-A lands (Deliverable 1 close-out).
+  # Requires replicating the full Core3 build chain in Actions:
+  #   clang-19, BerkeleyDB 5.3, Lua 5.3 dev, jemalloc, Boost, OpenSSL, ninja.
+  # The official SWGEmu bootstrap script is WSL2-specific; we'll either:
+  #   (a) port its apt install list to a Dockerfile + run here, or
+  #   (b) maintain a self-hosted runner on Ryan's machine.
+  # See workplans/phase-1/deliverable-00-dev-loop.md §0.4 for the plan.
+  #
+  # cpp-build:
+  #   name: C++ build (make build-ninja-debug)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install deps
+  #       run: ...
+  #     - name: Build
+  #       run: cd MMOCoreORB && make idl && make build-ninja-debug
