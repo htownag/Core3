@@ -624,3 +624,27 @@ creature_test = {
 	planetObjects = {
 	}
 }
+
+-- ExtractionMod-SWGEmu: server-side cloned zone using Lok terrain.
+-- Client rendering + UI override handled by Patch-A in Core3 fork
+-- (Zone::getClientZoneName + Zone::getTerrainName). This block MUST
+-- stay here until an upstream includeFile hook exists for
+-- planet_manager.lua (documented as rebase-conflict point in MOD_NOTES.md).
+-- Travel point coords filled in by Deliverable 10 when Rebel base is placed.
+extraction_outpost = {
+	weatherEnabled = 0,
+	gcwEnabled = 0,
+
+	planetTravelPoints = {
+		{name = "Extraction Outpost Base", x = 0.0, z = 0.0, y = 0.0, interplanetaryTravelAllowed = 1, incomingTravelAllowed = 1, landingRange = 3},
+	},
+
+	badgeAreas = {
+	},
+
+	navAreas = {
+	},
+
+	planetObjects = {
+	}
+}

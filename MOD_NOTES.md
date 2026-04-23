@@ -8,14 +8,14 @@ This branch is the C++ patch track for **ExtractionMod-SWGEmu**, an extraction-P
 
 A pre-Phase-1 research sprint against Core3 HEAD (2026-04-22) reduced the originally-planned 6-patch surface to 4 C++ patches plus one pure-Lua replacement. See the project repo's [`workplans/phase-1-research-notes.md`](https://github.com/htownag/ExtractionMod-SWGEmu/blob/main/workplans/phase-1-research-notes.md) for the full rationale, and [`docs/ultraplan.md`](https://github.com/htownag/ExtractionMod-SWGEmu/blob/main/docs/ultraplan.md) 2026-04-22 revision section for the decision trail.
 
-| Patch | File(s) | Purpose | LOC |
-|---|---|---|---|
-| **A** | `Zone.idl` + `ZoneImplementation.cpp` + 6 call sites:<br>`PlanetManager.idl:117`<br>`packets/zone/CmdStartScene.h:28`<br>`packets/object/PlayersNearYou.h:45`<br>`packets/ui/ClientMfdStatusUpdateMessage.h:24`<br>`packets/player/CharacterSheetResponseMessage.h:37`<br>`packets/player/CharacterSheetResponseMessage.h:58` | Zone terrain + client name override. Adds `Zone::getTerrainName()` + `Zone::getClientZoneName()` virtuals; patches the 6 call sites to use them. Enables Path B cloned-zone: server tracks `extraction_outpost`, client renders as `lok`. | ~60 |
-| **B** | `LootManagerImplementation.cpp:757` (leaf overload) | Sets PLANET_BOUND flag on `optionsBitmask` for loot created on `extraction_outpost`. All 3 `createLoot` overloads funnel to this leaf. | ~20 |
-| **C** | `PlayerManagerImplementation::sendPlayerToCloner` + new `ExtractionCorpseDespawnTask.h` | Death corpse-drop: on `extraction_outpost`, bag contents spawn as a lootable corpse container at death coords, 15-min despawn timer. | ~80 |
-| **D** | `TravelTerminalImplementation::handleObjectMenuSelect` + new `PlayerManager::extractionBagPreDeparture` helper | Shuttle pre-departure atomic transfer: bag contents → player inventory (overflow to bank), PLANET_BOUND flag cleared. Fires BEFORE animation begins. | ~30 |
+| Patch | File(s) | Purpose | LOC | Status |
+|---|---|---|---|---|
+| **A** | `Zone.idl` + `ZoneImplementation.cpp` + `ZoneServerImplementation.cpp` + 6 call sites:<br>`PlanetManager.idl:117`<br>`packets/zone/CmdStartScene.h:28`<br>`packets/object/PlayersNearYou.h:45`<br>`packets/ui/ClientMfdStatusUpdateMessage.h:24`<br>`packets/player/CharacterSheetResponseMessage.h:37`<br>`packets/player/CharacterSheetResponseMessage.h:58` | Zone terrain + client name override. Adds `clientZoneName` transient field + `getClientZoneName()` / `getTerrainName()` / `setClientZoneName()` on Zone; wires boot-time `setClientZoneName("lok")` for `extraction_outpost` in `ZoneServerImplementation::startGroundZones`. Enables Path B cloned-zone: server tracks `extraction_outpost`, client renders Lok terrain + shows "Lok" in UI. | ~40 actual (spec ~60) | ✅ Landed 2026-04-23 |
+| **B** | `LootManagerImplementation.cpp:757` (leaf overload) | Sets PLANET_BOUND flag on `optionsBitmask` for loot created on `extraction_outpost`. All 3 `createLoot` overloads funnel to this leaf. | ~20 | pending |
+| **C** | `PlayerManagerImplementation::sendPlayerToCloner` + new `ExtractionCorpseDespawnTask.h` | Death corpse-drop: on `extraction_outpost`, bag contents spawn as a lootable corpse container at death coords, 15-min despawn timer. | ~80 | pending |
+| **D** | `TravelTerminalImplementation::handleObjectMenuSelect` + new `PlayerManager::extractionBagPreDeparture` helper | Shuttle pre-departure atomic transfer: bag contents → player inventory (overflow to bank), PLANET_BOUND flag cleared. Fires BEFORE animation begins. | ~30 | pending |
 
-**Total C++ surface: ~190 LOC across 4 files.** Original ultraplan estimate was ~380–460 LOC across 6 files.
+**Total C++ surface projected: ~170 LOC across 4 files** (~40 landed in A + ~130 in B/C/D). Original ultraplan estimate was ~380–460 LOC across 6 files.
 
 ### Patch-3 replaced by Lua
 
@@ -39,7 +39,18 @@ Execution sequence documented in the project repo's [`workplans/phase-1.md`](htt
 
 The mod's Lua content — screenplays, templates, loot groups, mobile definitions — lives in the project repo at `mod-overlay/`. At deployment, rsync into `MMOCoreORB/bin/scripts/custom_scripts/` via the script at `scripts/sync-mod.sh` in the project repo. The vanilla Core3 loaders at `bin/scripts/{screenplays,mobile,object,loot}/*.lua` already include from `custom_scripts/`. **No vanilla file edits required for the overlay.**
 
-(Two small exceptions, documented per-deliverable: `config-local.lua` needs `"extraction_outpost"` added to `ZonesEnabled`, and `bin/scripts/managers/planet/planet_manager.lua` may need an entry-shuttle fare-table edit for Deliverable 11 — both will be revisited as post-load hooks before first public release.)
+## Rebase-conflict points — vanilla-tree edits
+
+The mod overlay goal is "zero vanilla edits," but some Core3 subsystems don't have a `custom_scripts/` hook and require direct appends to vanilla files. Each such edit is listed below with its reason; on every upstream rebase, these need to be re-applied by hand.
+
+| # | File | Edit | Reason | Landed in |
+|---|---|---|---|---|
+| 1 | `MMOCoreORB/bin/conf/config-local.lua` | `"extraction_outpost"` appended to `ZonesEnabled` | `config-local.lua` is NOT tracked in git — per-operator local config — so this is re-added on a fresh setup, not "conflicted." Documented here for continuity. | D1 |
+| 2 | `MMOCoreORB/bin/scripts/managers/planet/planet_manager.lua` | `extraction_outpost = { ... }` block appended at tail | `PlanetManagerImplementation::loadLuaConfig` uses `new Lua(); init(); runFile(...)` without registering the `includeFile` helper — so `custom_scripts/` shim is not available in this Lua context. Full-block direct append is the only option until an upstream hook lands. | D1 |
+| 3 | `MMOCoreORB/bin/scripts/managers/planet/extraction_outpost_regions.lua` | New file: `extraction_outpost_regions = {}` (empty table) | `PlanetManagerImplementation::loadRegions()` runs `scripts/managers/planet/<zoneName>_regions.lua` for every zone on boot. Missing file → per-boot `ERROR cannot open ...` log spam. Empty table satisfies the loader. Real per-zone `ActiveArea`s for this mod live as screenplays under `custom_scripts/screenplays/extraction_mod/` (different Lua context, includeFile works there). | D1 |
+| 4 | `MMOCoreORB/bin/scripts/managers/planet/planet_manager.lua` (possible second edit) | `travelFares` overrides for `extraction_outpost` ↔ vanilla planets | Deliverable 11 (entry shuttle from Coronet). Decision between C++ post-load hook vs Lua-driven overrides is open — lean Lua. If Lua, this file grows a second edit. | planned D11 |
+
+**On rebase:** `git diff upstream/unstable HEAD --stat` and re-apply items 2–4 by hand if they conflict. Item 1 is local-only; item 3 is a new file so it won't conflict.
 
 ## Related files on this branch
 
@@ -54,4 +65,4 @@ The mod's Lua content — screenplays, templates, loot groups, mobile definition
 
 ---
 
-*Last updated: 2026-04-22 (Phase 1 Deliverable 0 close-out). Each subsequent patch landing appends a commit + updates this table's LOC column as written.*
+*Last updated: 2026-04-23 (Phase 1 Deliverable 1 close-out — Patch-A landed, verified in-client: extraction_outpost boots with Lok terrain, all 4 client UI surfaces read "Lok", vanilla zones regression-clean). Each subsequent patch landing appends a commit + updates this table's Status column.*

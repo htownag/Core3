@@ -263,3 +263,15 @@ void ZoneImplementation::decrementSpawnedAgents() {
 
 	spawnedAiAgents.decrement();
 }
+
+void ZoneImplementation::setClientZoneName(const String& name) {
+	clientZoneName = name;
+}
+
+String ZoneImplementation::getClientZoneName() {
+	return clientZoneName.isEmpty() ? zoneName : clientZoneName;
+}
+
+String ZoneImplementation::getTerrainName() {
+	return "terrain/" + getClientZoneName() + ".trn";
+}

@@ -1,0 +1,4 @@
+-- ExtractionMod-SWGEmu: custom_scripts mobile include-shell.
+--
+-- Core3's bin/scripts/mobile/serverobjects.lua:50 includes this file.
+-- Populates during Phase 1 Deliverable 8 (elite mob templates).

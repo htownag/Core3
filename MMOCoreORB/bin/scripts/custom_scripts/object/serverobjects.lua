@@ -1,0 +1,5 @@
+-- ExtractionMod-SWGEmu: custom_scripts object include-shell.
+--
+-- Core3's bin/scripts/object/serverobjects.lua:89 includes this file.
+-- Populates during Phase 1 Deliverable 2 (extraction bag template)
+-- and Deliverable 5 (extraction corpse template).

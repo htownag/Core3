@@ -256,6 +256,15 @@ void ZoneServerImplementation::startGroundZones() {
 		}
 
 		GroundZone* zone = new GroundZone(processor, zoneName);
+
+		// Mod: Path B cloned zone — server tracks "extraction_outpost",
+		// client renders Lok terrain + shows "Lok" in UI. See Patch-A.
+		// MUST run before initializePrivateData, which creates the
+		// PlanetManager and loads the terrain via zone->getTerrainName().
+		if (zoneName == "extraction_outpost") {
+			zone->setClientZoneName("lok");
+		}
+
 		zone->createContainerComponent();
 		zone->initializePrivateData();
 		zone->deploy("GroundZone " + zoneName);

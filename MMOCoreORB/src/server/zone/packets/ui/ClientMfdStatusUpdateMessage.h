@@ -21,7 +21,7 @@ public:
 	ClientMfdStatusUpdateMessage(SceneObject* sceno) : BaseMessage() {
 		insertShort(0x06);
 		insertInt(0x2D2D6EE1);  // CRC
-		insertAscii(sceno->getZone()->getZoneName());
+		insertAscii(sceno->getZone()->getClientZoneName());
 		insertLong(sceno->getObjectID());
 		insertFloat(sceno->getWorldPositionX()); //x
 		insertFloat(sceno->getWorldPositionZ()); //z

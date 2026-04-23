@@ -25,7 +25,7 @@ public:
 		insertInt(0x3AE6DFAE);
 		insertByte(0);
 		insertLong(creo->getObjectID());
-		insertAscii("terrain/" + zone->getZoneName() + ".trn"); //terrain name
+		insertAscii(zone->getTerrainName()); //terrain name
 
 		Vector3 worldPosition = creo->getWorldPosition();
 

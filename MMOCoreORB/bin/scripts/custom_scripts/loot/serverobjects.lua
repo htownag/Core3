@@ -1,0 +1,4 @@
+-- ExtractionMod-SWGEmu: custom_scripts loot include-shell.
+--
+-- Core3's bin/scripts/loot/serverobjects.lua:5 includes this file.
+-- Populates during Phase 1 Deliverable 8 (extraction_outpost_elites loot group).
