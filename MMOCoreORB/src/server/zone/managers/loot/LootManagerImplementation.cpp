@@ -799,6 +799,21 @@ uint64 LootManagerImplementation::createLoot(TransactionLog& trx, SceneObject* c
 		return 0;
 	}
 
+	// ==== Begin Patch-B: planet-bound tag for extraction_outpost loot ====
+	// Tag items created inside the extraction zone so Deliverables 4 (inventory-
+	// redirect observer) and 5 (corpse-drop selector) can distinguish them.
+	// luaStringData is the canonical Core3 per-tangible string tag (used by
+	// vanilla village phase4 for ownerID/trackingPlanet/etc.); no IDL edit,
+	// no wire exposure. See ExtractionMod-SWGEmu workplans/phase-1/deliverable-03.
+	if (container != nullptr) {
+		auto lootZone = container->getZone();
+		if (lootZone != nullptr && lootZone->getZoneName() == "extraction_outpost") {
+			Locker objLocker(obj);
+			obj->setLuaStringData("extractpvp:planet_bound", "1");
+		}
+	}
+	// ==== End Patch-B ====
+
 	trx.setSubject(obj);
 
 	if (container->transferObject(obj, -1, false, true)) {

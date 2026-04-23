@@ -89,6 +89,31 @@ bool LuaContainerComponent::removeObject(SceneObject* sceneObject, SceneObject* 
 }
 
 /**
+ * Patch-E (ExtractionMod-SWGEmu): forward checkContainerPermission to the Lua class.
+ * Mirrors the canAddObject / transferObject / removeObject forwarding pattern above.
+ * Lua return: -1 = fall through to base; 0 = deny; non-zero non-(-1) = allow.
+ */
+bool LuaContainerComponent::checkContainerPermission(SceneObject* sceneObject, CreatureObject* creature, uint16 permission) const {
+	Lua* lua = DirectorManager::instance()->getLuaInstance();
+
+	LuaFunction runMethod(lua->getLuaState(), luaClassName, "checkContainerPermission", 1);
+	runMethod << sceneObject;
+	runMethod << creature;
+	runMethod << permission;
+
+	runMethod.callFunction();
+
+	int result = lua_tointeger(lua->getLuaState(), -1);
+
+	lua_pop(lua->getLuaState(), 1);
+
+	if (result == -1)
+		return ContainerComponent::checkContainerPermission(sceneObject, creature, permission);
+
+	return result != 0;
+}
+
+/**
  * Is called when this object has been inserted with an object
  * @param object object that has been inserted
  */

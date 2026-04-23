@@ -69,6 +69,13 @@ public:
 	virtual int canAddObject(SceneObject* sceneObject, SceneObject* object, int containmentType, String& errorDescription) const;
 
 	/**
+	 * Patch-E (ExtractionMod-SWGEmu): forward checkContainerPermission to the Lua class.
+	 * Lua returns: -1 = fall through to base ContainerComponent; 0 = deny; non-zero non-(-1) = allow.
+	 * Enables Lua-side dynamic permission gating (e.g., MOVEOUT denial while on a specific zone).
+	 */
+	virtual bool checkContainerPermission(SceneObject* sceneObject, CreatureObject* creature, uint16 permission) const;
+
+	/**
 	 * Is called when this object has been inserted with an object
 	 * @param object object that has been inserted
 	 */
