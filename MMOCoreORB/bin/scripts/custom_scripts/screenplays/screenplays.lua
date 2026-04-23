@@ -11,9 +11,9 @@
 
 includeFile("../custom_scripts/screenplays/extraction_mod/hello.lua")
 includeFile("../custom_scripts/screenplays/extraction_mod/extraction_outpost_regions.lua")
+includeFile("../custom_scripts/screenplays/extraction_mod/extraction_bag_container.lua")
+includeFile("../custom_scripts/screenplays/extraction_mod/extraction_region_observer.lua")
 
--- Future (populates during Phase 1 deliverables):
--- includeFile("../custom_scripts/screenplays/extraction_mod/extraction_bag_container.lua")     -- Deliverable 2
--- includeFile("../custom_scripts/screenplays/extraction_mod/extraction_region_observer.lua")   -- Deliverable 4
+-- Future (populates during later Phase 1 deliverables):
 -- includeFile("../custom_scripts/screenplays/extraction_mod/extraction_tower_rotation.lua")    -- Deliverable 7
 -- includeFile("../custom_scripts/screenplays/extraction_mod/extraction_rebel_base.lua")        -- Deliverable 10

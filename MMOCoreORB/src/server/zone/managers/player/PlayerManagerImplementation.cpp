@@ -4218,6 +4218,51 @@ int PlayerManagerImplementation::checkSpeedHackTests(CreatureObject* player, Pla
 	return Transform::FULL_VALIDATED;
 }
 
+// ==== Patch-F: extraction-mod loot auto-route (see workplans/phase-1/deliverable-04b-loot-autoroute.md) ====
+namespace {
+	// If the given loot object is a planet-bound tangible and the player is on
+	// extraction_outpost with an extraction bag in their top-level inventory,
+	// return the bag. Otherwise nullptr, and the caller falls back to the
+	// player's main inventory. Called once per looted item in lootAll; must be
+	// cheap on the nullptr path.
+	//
+	// Limitation: top-level inventory walk only. D4's Lua findExtractionBag
+	// uses recursive=true. In practice the bag is always at top level (giveItem
+	// places it there, noTrade=1 blocks cross-player moves, players can't nest
+	// it inside another of their own containers without effort). [OPEN] if
+	// playtest surfaces a case.
+	SceneObject* findExtractionBagIfRoutable(CreatureObject* player, SceneObject* object) {
+		if (player == nullptr || object == nullptr)
+			return nullptr;
+
+		Zone* zone = player->getZone();
+		if (zone == nullptr || zone->getZoneName() != "extraction_outpost")
+			return nullptr;
+
+		if (!object->isTangibleObject())
+			return nullptr;
+		TangibleObject* tano = cast<TangibleObject*>(object);
+		if (tano == nullptr || tano->getLuaStringData("extractpvp:planet_bound") != "1")
+			return nullptr;
+
+		static const uint32 EXTRACTION_BAG_CRC =
+			String("object/tangible/container/extraction_bag.iff").hashCode();
+
+		SceneObject* inventory = player->getInventory();
+		if (inventory == nullptr)
+			return nullptr;
+
+		int count = inventory->getContainerObjectsSize();
+		for (int i = 0; i < count; i++) {
+			SceneObject* child = inventory->getContainerObject(i);
+			if (child != nullptr && child->getServerObjectCRC() == EXTRACTION_BAG_CRC)
+				return child;
+		}
+		return nullptr;
+	}
+}
+// ==== End Patch-F helper ====
+
 void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject* ai) {
 	Locker locker(ai, player);
 
@@ -4271,10 +4316,17 @@ void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject
 	for (int i = totalItems - 1; i >= 0; --i) {
 		SceneObject* object = creatureInventory->getContainerObject(i);
 
+		// Patch-F: branch destination if this is a planet-bound tangible and
+		// the player has an extraction bag (on extraction_outpost only).
+		SceneObject* destination = playerInventory;
+		SceneObject* bag = findExtractionBagIfRoutable(player, object);
+		if (bag != nullptr)
+			destination = bag;
+
 		TransactionLog trx(ai, player, object, TrxCode::NPCLOOTCLAIM);
 		trx.setTrxGroup(trxGroup);
 
-		TransferItemMiscCommand::doTransferItemMisc(player, object, playerInventory, -1, trx);
+		TransferItemMiscCommand::doTransferItemMisc(player, object, destination, -1, trx);
 	}
 
 	if (creatureInventory->getContainerObjectsSize() <= 0) {
