@@ -8,6 +8,4 @@
 -- up and re-enter our subtree.
 
 includeFile("../custom_scripts/object/extraction_mod/tangible/container/extraction_bag.lua")
-
--- Future (populates during later Phase 1 deliverables):
--- includeFile("../custom_scripts/object/extraction_mod/tangible/container/extraction_corpse.lua")  -- Deliverable 5
+includeFile("../custom_scripts/object/extraction_mod/tangible/container/extraction_corpse.lua")

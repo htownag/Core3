@@ -82,6 +82,7 @@
 #include "server/zone/objects/tangible/tool/CraftingTool.h"
 
 #include "server/zone/Zone.h"
+#include "server/zone/objects/creature/events/ExtractionCorpseDespawnTask.h"
 #include "server/zone/managers/player/creation/PlayerCreationManager.h"
 #include "server/ServerCore.h"
 #include "server/login/account/Account.h"
@@ -123,6 +124,143 @@
 #include "server/zone/managers/statistics/StatisticsManager.h"
 
 // #define DEBUG_SPEED_HACK
+
+// ==== Patch-F: extraction-mod loot auto-route (see workplans/phase-1/deliverable-04b-loot-autoroute.md) ====
+namespace {
+	// If the given loot object is a planet-bound tangible and the player is on
+	// extraction_outpost with an extraction bag in their top-level inventory,
+	// return the bag. Otherwise nullptr, and the caller falls back to the
+	// player's main inventory. Called once per looted item in lootAll; must be
+	// cheap on the nullptr path.
+	//
+	// Limitation: top-level inventory walk only. D4's Lua findExtractionBag
+	// uses recursive=true. In practice the bag is always at top level (giveItem
+	// places it there, noTrade=1 blocks cross-player moves, players can't nest
+	// it inside another of their own containers without effort). [OPEN] if
+	// playtest surfaces a case.
+	// Patch-C shares this raw bag-lookup. Top-level inventory walk only.
+	TangibleObject* findExtractionBag(CreatureObject* player) {
+		if (player == nullptr)
+			return nullptr;
+
+		static const uint32 EXTRACTION_BAG_CRC =
+			String("object/tangible/container/extraction_bag.iff").hashCode();
+
+		SceneObject* inventory = player->getInventory();
+		if (inventory == nullptr)
+			return nullptr;
+
+		int count = inventory->getContainerObjectsSize();
+		for (int i = 0; i < count; i++) {
+			SceneObject* child = inventory->getContainerObject(i);
+			if (child != nullptr && child->getServerObjectCRC() == EXTRACTION_BAG_CRC)
+				return cast<TangibleObject*>(child);
+		}
+		return nullptr;
+	}
+
+	SceneObject* findExtractionBagIfRoutable(CreatureObject* player, SceneObject* object) {
+		if (player == nullptr || object == nullptr)
+			return nullptr;
+
+		Zone* zone = player->getZone();
+		if (zone == nullptr || zone->getZoneName() != "extraction_outpost")
+			return nullptr;
+
+		if (!object->isTangibleObject())
+			return nullptr;
+		TangibleObject* tano = cast<TangibleObject*>(object);
+		if (tano == nullptr || tano->getLuaStringData("extractpvp:planet_bound") != "1")
+			return nullptr;
+
+		return findExtractionBag(player);
+	}
+
+	// Patch-C: on death on extraction_outpost, spawn the player's bag contents
+	// as a lootable corpse container at the death coords, leave the bag itself
+	// in inventory (empty), schedule a 15-min despawn. Called from
+	// sendPlayerToCloner BEFORE setCloning(true) / switchZone so the player's
+	// getWorldPosition* and getParentID still reflect the death location.
+	//
+	// Caller (CloningRequestSuiCallback) does not hold Locker(player), so we
+	// take it here. Locker is re-entrant; redundant if the caller happened to
+	// be holding it.
+	void dropExtractionBagToCorpse(CreatureObject* player) {
+		if (player == nullptr)
+			return;
+
+		Locker playerLocker(player);
+
+		Zone* zone = player->getZone();
+		if (zone == nullptr)
+			return;
+
+		TangibleObject* bag = findExtractionBag(player);
+		if (bag == nullptr)
+			return;
+
+		Locker bagLocker(bag, player);
+
+		int numContents = bag->getContainerObjectsSize();
+		if (numContents == 0)
+			return;
+
+		float deathX = player->getWorldPositionX();
+		float deathZ = player->getWorldPositionZ();
+		float deathY = player->getWorldPositionY();
+		uint64 parentID = player->getParentID();
+
+		ZoneServer* server = zone->getZoneServer();
+		if (server == nullptr)
+			return;
+
+		static const uint32 EXTRACTION_CORPSE_CRC =
+			String("object/tangible/container/extraction_corpse.iff").hashCode();
+
+		ManagedReference<SceneObject*> corpseSO = server->createObject(EXTRACTION_CORPSE_CRC, 1);
+		if (corpseSO == nullptr)
+			return;
+
+		TangibleObject* corpse = cast<TangibleObject*>(corpseSO.get());
+		if (corpse == nullptr)
+			return;
+
+		Locker corpseLocker(corpse, player);
+
+		corpse->setCustomObjectName(UnicodeString("Dropped Pack"), false);
+
+		// Reverse iterate to avoid index shifts as we remove.
+		for (int i = numContents - 1; i >= 0; i--) {
+			ManagedReference<SceneObject*> item = bag->getContainerObject(i);
+			if (item == nullptr)
+				continue;
+
+			Locker itemLocker(item, corpse);
+			corpse->transferObject(item, -1, false);
+		}
+
+		corpse->initializePosition(deathX, deathZ, deathY);
+
+		if (parentID == 0) {
+			zone->transferObject(corpse, -1, true);
+		} else {
+			ManagedReference<SceneObject*> cell = server->getObject(parentID);
+			if (cell != nullptr) {
+				Locker cellLocker(cell, player);
+				cell->transferObject(corpse, -1, true);
+			} else {
+				zone->transferObject(corpse, -1, true);
+			}
+		}
+
+		Reference<ExtractionCorpseDespawnTask*> despawnTask = new ExtractionCorpseDespawnTask(corpse);
+		despawnTask->schedule(15 * 60 * 1000);
+
+		player->sendSystemMessage("Your extraction bag contents have dropped at your death location.");
+	}
+}
+// ==== End Patch-F helper ====
+
 
 PlayerManagerImplementation::PlayerManagerImplementation(ZoneServer* zoneServer, ZoneProcessServer* impl, bool trackOnlineUsers) : Logger("PlayerManager") {
 	playerLoggerFilename = "log/player.log";
@@ -1316,6 +1454,18 @@ void PlayerManagerImplementation::killPlayer(TangibleObject* attacker, CreatureO
 	if (player == nullptr) {
 		error() << __FILE__ << ":" << __FUNCTION__ << "()" << " player is nullptr";
 		return;
+	}
+
+	// Patch-C: extraction-mod death corpse-drop. Fires at moment of death,
+	// BEFORE sendActivateCloneRequest shows the clone SUI. Works whether the
+	// player clones or not -- contents drop as soon as death is registered.
+	// Covers mob kills, admin /killPlayer (which funnels here via
+	// KillPlayerCommand.h), and any other killPlayer caller.
+	{
+		Zone* playerZone = player->getZone();
+		if (playerZone != nullptr && playerZone->getZoneName() == "extraction_outpost") {
+			dropExtractionBagToCorpse(player);
+		}
 	}
 
 	StringIdChatParameter stringId;
@@ -4217,51 +4367,6 @@ int PlayerManagerImplementation::checkSpeedHackTests(CreatureObject* player, Pla
 
 	return Transform::FULL_VALIDATED;
 }
-
-// ==== Patch-F: extraction-mod loot auto-route (see workplans/phase-1/deliverable-04b-loot-autoroute.md) ====
-namespace {
-	// If the given loot object is a planet-bound tangible and the player is on
-	// extraction_outpost with an extraction bag in their top-level inventory,
-	// return the bag. Otherwise nullptr, and the caller falls back to the
-	// player's main inventory. Called once per looted item in lootAll; must be
-	// cheap on the nullptr path.
-	//
-	// Limitation: top-level inventory walk only. D4's Lua findExtractionBag
-	// uses recursive=true. In practice the bag is always at top level (giveItem
-	// places it there, noTrade=1 blocks cross-player moves, players can't nest
-	// it inside another of their own containers without effort). [OPEN] if
-	// playtest surfaces a case.
-	SceneObject* findExtractionBagIfRoutable(CreatureObject* player, SceneObject* object) {
-		if (player == nullptr || object == nullptr)
-			return nullptr;
-
-		Zone* zone = player->getZone();
-		if (zone == nullptr || zone->getZoneName() != "extraction_outpost")
-			return nullptr;
-
-		if (!object->isTangibleObject())
-			return nullptr;
-		TangibleObject* tano = cast<TangibleObject*>(object);
-		if (tano == nullptr || tano->getLuaStringData("extractpvp:planet_bound") != "1")
-			return nullptr;
-
-		static const uint32 EXTRACTION_BAG_CRC =
-			String("object/tangible/container/extraction_bag.iff").hashCode();
-
-		SceneObject* inventory = player->getInventory();
-		if (inventory == nullptr)
-			return nullptr;
-
-		int count = inventory->getContainerObjectsSize();
-		for (int i = 0; i < count; i++) {
-			SceneObject* child = inventory->getContainerObject(i);
-			if (child != nullptr && child->getServerObjectCRC() == EXTRACTION_BAG_CRC)
-				return child;
-		}
-		return nullptr;
-	}
-}
-// ==== End Patch-F helper ====
 
 void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject* ai) {
 	Locker locker(ai, player);

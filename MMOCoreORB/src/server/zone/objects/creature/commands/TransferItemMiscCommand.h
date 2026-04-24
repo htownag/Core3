@@ -8,6 +8,8 @@
 #include "server/ServerCore.h"
 #include "server/zone/ZoneServer.h"
 #include "server/zone/objects/scene/SceneObject.h"
+#include "server/zone/objects/tangible/TangibleObject.h"
+#include "server/zone/Zone.h"
 #include "server/zone/managers/objectcontroller/ObjectController.h"
 #include "server/zone/managers/player/PlayerManager.h"
 #include "server/zone/objects/player/sessions/TradeSession.h"
@@ -121,6 +123,40 @@ public:
 			trx.abort() << "destinationObject is IntangibleObject";
 			return GENERALERROR;
 		}
+
+		// ==== Patch-G: extraction-mod auto-route for manual-drag transfers ====
+		// If a tagged (extractpvp:planet_bound="1") item is being moved into the
+		// player's main inventory on extraction_outpost, substitute the player's
+		// Extraction Pack as the destination. Generalizes Patch-F's lootAll-only
+		// auto-route to cover manual drags from the Dropped Pack, NPC corpse UI,
+		// any other source container. See workplans/phase-1/deliverable-05-death-drop.md.
+		//
+		// [OPEN]: if the looter has no Extraction Pack (admin-deleted, or not on
+		// extraction_outpost when the bag was grantable), tagged items land in
+		// inventory as a fallback. Row 17-style smuggle hole; accepted v0.1.
+		{
+			SceneObject* looterInventory = creature->getInventory();
+			if (looterInventory != nullptr && destinationObject == looterInventory) {
+				Zone* looterZone = creature->getZone();
+				if (looterZone != nullptr && looterZone->getZoneName() == "extraction_outpost"
+						&& objectToTransfer->isTangibleObject()) {
+					TangibleObject* taggedCheck = cast<TangibleObject*>(objectToTransfer);
+					if (taggedCheck != nullptr && taggedCheck->getLuaStringData("extractpvp:planet_bound") == "1") {
+						static const uint32 EXTRACTION_BAG_CRC =
+							String("object/tangible/container/extraction_bag.iff").hashCode();
+						int count = looterInventory->getContainerObjectsSize();
+						for (int i = 0; i < count; i++) {
+							SceneObject* child = looterInventory->getContainerObject(i);
+							if (child != nullptr && child->getServerObjectCRC() == EXTRACTION_BAG_CRC) {
+								destinationObject = child;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		// ==== End Patch-G ====
 
 		if (objectToTransfer->isClientObject() || (!objectToTransfer->isTangibleObject())){
 			if (!objectToTransfer->isManufactureSchematic()){
