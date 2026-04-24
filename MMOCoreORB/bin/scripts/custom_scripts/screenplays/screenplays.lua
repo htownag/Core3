@@ -13,6 +13,7 @@ includeFile("../custom_scripts/screenplays/extraction_mod/hello.lua")
 includeFile("../custom_scripts/screenplays/extraction_mod/extraction_outpost_regions.lua")
 includeFile("../custom_scripts/screenplays/extraction_mod/extraction_bag_container.lua")
 includeFile("../custom_scripts/screenplays/extraction_mod/extraction_region_observer.lua")
+includeFile("../custom_scripts/screenplays/extraction_mod/extraction_temp_shuttleport.lua")   -- Deliverable 6 Session 1 (temp; removed at D11)
 
 -- Future (populates during later Phase 1 deliverables):
 -- includeFile("../custom_scripts/screenplays/extraction_mod/extraction_tower_rotation.lua")    -- Deliverable 7
