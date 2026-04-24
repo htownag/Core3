@@ -34,7 +34,7 @@ public:
 			insertFloat(cloningFacility->getPositionX());
 			insertFloat(cloningFacility->getPositionZ());
 			insertFloat(cloningFacility->getPositionY());
-			insertAscii(cloningFacility->getZone()->getClientZoneName()); //note: the client ignores the tutorial zone
+			insertAscii(cloningFacility->getZone()->getZoneName()); //note: the client ignores the tutorial zone
 		} else {
 			insertFloat(0); //Bind Location X
 			insertFloat(0); //Bind Location Z
@@ -55,7 +55,7 @@ public:
 			insertFloat(declaredResidence->getPositionX()); //Home Location X
 			insertFloat(declaredResidence->getPositionZ()); //Home Location Z
 			insertFloat(declaredResidence->getPositionY()); //Home Location Y
-			insertAscii(declaredResidence->getZone()->getClientZoneName()); //Home Planet
+			insertAscii(declaredResidence->getZone()->getZoneName()); //Home Planet
 		} else {
 			insertFloat(0);
 			insertFloat(0);

@@ -114,7 +114,7 @@ class PlanetManager extends ManagedService implements Logger {
 
 		terrainManager = new TerrainManager();
 
-		if (terrainManager.initialize(zone.getTerrainName())) {
+		if (terrainManager.initialize("terrain/" + zone.getZoneName() + ".trn")) {
 			Logger.info("Loaded terrain file successfully.");
 		} else {
 			Logger.error("Failed to load terrain file.");

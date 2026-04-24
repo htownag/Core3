@@ -42,7 +42,7 @@ public:
 		Zone* zone = player->getZone();
 
 		if (zone != nullptr) {
-			zoneName = zone->getClientZoneName();
+			zoneName = zone->getZoneName();
 		}
 
 		if (player->getCityRegion() != nullptr) {

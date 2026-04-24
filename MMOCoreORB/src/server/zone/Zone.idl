@@ -66,10 +66,6 @@ class Zone extends SceneObject {
 
 	protected unsigned int zoneCRC;
 
-	// Mod: empty by default; if set, overrides zoneName in client-facing packets
-	// and the server terrain-path. See getClientZoneName / getTerrainName below.
-	protected transient string clientZoneName;
-
 	protected transient ZoneProcessServer processor;
 
 	// Zone Default Constructor
@@ -275,19 +271,11 @@ class Zone extends SceneObject {
 		server = zoneServ;
 	}
 
-	public native void setClientZoneName(final string name);
-
 	// Accessors
 	@dirty
 	public string getZoneName() {
 		return zoneName;
 	}
-
-	@dirty
-	public native string getClientZoneName();
-
-	@dirty
-	public native string getTerrainName();
 
 	@dirty
 	public unsigned int getZoneCRC() {
