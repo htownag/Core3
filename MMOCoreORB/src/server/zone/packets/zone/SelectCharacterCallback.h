@@ -109,6 +109,29 @@ public:
 
 		auto zone = zoneServer->getZone(zoneName);
 
+		// === EXTRACTION-MOD HOTFIX: orphan-zone fallback to Coronet Starport ===
+		// Captures characters whose stored zone was renamed/removed (e.g.
+		// extraction_outpost -> tython during D6-v2 rebuild). Falls back to a
+		// stable vanilla zone (Corellia at Coronet Starport) instead of bouncing
+		// them with "The planet where your character was stored is disabled!".
+		// Coronet Starport coords from planet_manager.lua line 63 (PTP table).
+		// REVERT once orphan migration is complete (track in workplans/phase-1.md).
+		if (zone == nullptr && !zoneName.isEmpty()) {
+			String oldZoneName = zoneName;
+			zoneName = "corellia";
+			zone = zoneServer->getZone(zoneName);
+			if (zone != nullptr) {
+				player->error() << "ExtractionMod orphan-zone fallback: '" << oldZoneName
+					<< "' is not registered; redirecting " << player->getFirstName()
+					<< " to Coronet Starport on Corellia.";
+				ghost->setSavedTerrainName(zoneName);
+				ghost->setSavedParentID(0);
+				// Coronet Starport PTP coords (planet_manager.lua line 63)
+				player->initializePosition(-66.76f, 28.0f, -4711.33f);
+			}
+		}
+		// === end hotfix ===
+
 #ifdef DEBUG_SELECT_CHAR_CALLBACK
 		StringBuffer debugMsg;
 

@@ -149,6 +149,7 @@ Core3 = {
 	------TRE config------
 	TrePath = "/home/swgemu/Desktop/SWGEmu",
 	TreFiles = {
+		"tython_01.tre",   -- ExtractionMod-SWGEmu D6 v2 (top priority)
 		"default_patch.tre",
 		"patch_sku1_14_00.tre",
 		"patch_14_00.tre",

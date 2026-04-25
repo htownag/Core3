@@ -126,19 +126,19 @@ public:
 
 		// ==== Patch-G: extraction-mod auto-route for manual-drag transfers ====
 		// If a tagged (extractpvp:planet_bound="1") item is being moved into the
-		// player's main inventory on extraction_outpost, substitute the player's
+		// player's main inventory on tython, substitute the player's
 		// Extraction Pack as the destination. Generalizes Patch-F's lootAll-only
 		// auto-route to cover manual drags from the Dropped Pack, NPC corpse UI,
 		// any other source container. See workplans/phase-1/deliverable-05-death-drop.md.
 		//
 		// [OPEN]: if the looter has no Extraction Pack (admin-deleted, or not on
-		// extraction_outpost when the bag was grantable), tagged items land in
+		// tython when the bag was grantable), tagged items land in
 		// inventory as a fallback. Row 17-style smuggle hole; accepted v0.1.
 		{
 			SceneObject* looterInventory = creature->getInventory();
 			if (looterInventory != nullptr && destinationObject == looterInventory) {
 				Zone* looterZone = creature->getZone();
-				if (looterZone != nullptr && looterZone->getZoneName() == "extraction_outpost"
+				if (looterZone != nullptr && looterZone->getZoneName() == "tython"
 						&& objectToTransfer->isTangibleObject()) {
 					TangibleObject* taggedCheck = cast<TangibleObject*>(objectToTransfer);
 					if (taggedCheck != nullptr && taggedCheck->getLuaStringData("extractpvp:planet_bound") == "1") {

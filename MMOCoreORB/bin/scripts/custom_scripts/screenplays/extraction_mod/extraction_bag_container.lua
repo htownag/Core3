@@ -26,7 +26,7 @@
 --     observer rejects planet_bound items entering main inventory.
 --
 --   Rule 2 (on-zone outbound lock) — checkContainerPermission denies MOVEOUT
---     while the player root-parent's zone is extraction_outpost.
+--     while the player root-parent's zone is tython.
 --
 --   Rule 3 (bag-itself smuggle protection) — noTrade=1 on the server template
 --     blocks trade/auction/droid. Own-bank deposit gap is closed by D4 (tag
@@ -34,7 +34,7 @@
 
 ExtractionBagContainerComponent = {}
 
-local EXTRACTION_ZONE = "extraction_outpost"
+local EXTRACTION_ZONE = "tython"
 
 -- Return-value constants.
 local FALL_THROUGH = -1
@@ -81,7 +81,7 @@ function ExtractionBagContainerComponent:removeObject(pSceneObject, pObject, pDe
 end
 
 function ExtractionBagContainerComponent:checkContainerPermission(pSceneObject, pCreature, permission)
-	-- Rule 2: while on extraction_outpost, deny MOVEOUT of items from the bag.
+	-- Rule 2: while on tython, deny MOVEOUT of items from the bag.
 	-- TransferItemMiscCommand.h:148 honors this return and aborts the transfer
 	-- before any removeObject / canAddObject / transferObject fires.
 	if permission == PERM_MOVEOUT and isOnExtractionZone(pSceneObject) then

@@ -128,7 +128,7 @@
 // ==== Patch-F: extraction-mod loot auto-route (see workplans/phase-1/deliverable-04b-loot-autoroute.md) ====
 namespace {
 	// If the given loot object is a planet-bound tangible and the player is on
-	// extraction_outpost with an extraction bag in their top-level inventory,
+	// tython with an extraction bag in their top-level inventory,
 	// return the bag. Otherwise nullptr, and the caller falls back to the
 	// player's main inventory. Called once per looted item in lootAll; must be
 	// cheap on the nullptr path.
@@ -164,7 +164,7 @@ namespace {
 			return nullptr;
 
 		Zone* zone = player->getZone();
-		if (zone == nullptr || zone->getZoneName() != "extraction_outpost")
+		if (zone == nullptr || zone->getZoneName() != "tython")
 			return nullptr;
 
 		if (!object->isTangibleObject())
@@ -176,7 +176,7 @@ namespace {
 		return findExtractionBag(player);
 	}
 
-	// Patch-C: on death on extraction_outpost, spawn the player's bag contents
+	// Patch-C: on death on tython, spawn the player's bag contents
 	// as a lootable corpse container at the death coords, leave the bag itself
 	// in inventory (empty), schedule a 15-min despawn. Called from
 	// sendPlayerToCloner BEFORE setCloning(true) / switchZone so the player's
@@ -1463,7 +1463,7 @@ void PlayerManagerImplementation::killPlayer(TangibleObject* attacker, CreatureO
 	// KillPlayerCommand.h), and any other killPlayer caller.
 	{
 		Zone* playerZone = player->getZone();
-		if (playerZone != nullptr && playerZone->getZoneName() == "extraction_outpost") {
+		if (playerZone != nullptr && playerZone->getZoneName() == "tython") {
 			dropExtractionBagToCorpse(player);
 		}
 	}
@@ -4422,7 +4422,7 @@ void PlayerManagerImplementation::lootAll(CreatureObject* player, CreatureObject
 		SceneObject* object = creatureInventory->getContainerObject(i);
 
 		// Patch-F: branch destination if this is a planet-bound tangible and
-		// the player has an extraction bag (on extraction_outpost only).
+		// the player has an extraction bag (on tython only).
 		SceneObject* destination = playerInventory;
 		SceneObject* bag = findExtractionBagIfRoutable(player, object);
 		if (bag != nullptr)

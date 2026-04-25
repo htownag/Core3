@@ -3,7 +3,7 @@
  *
  * Patch-C: one-shot despawn timer for extraction-mod death corpse containers.
  * Scheduled by PlayerManagerImplementation::dropExtractionBagToCorpse when a
- * player dies on extraction_outpost; fires 15 minutes later and destroys the
+ * player dies on tython; fires 15 minutes later and destroys the
  * corpse container from world + database.
  *
  * Pattern cloned from DespawnCreatureTask / CampDespawnTask under

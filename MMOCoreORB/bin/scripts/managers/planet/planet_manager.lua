@@ -626,17 +626,17 @@ creature_test = {
 }
 
 -- ExtractionMod-SWGEmu: first-class 11th ground planet (D6 v2, 2026-04-24).
--- Renders client-side via extraction_outpost_01.tre (mod TRE containing
--- planet_crc_string_table, travel.iff, environment/extraction_outpost.iff,
--- clientregion/extraction_outpost.iff, terrain/extraction_outpost.trn,
--- terrain/colorramp/extraction_outpost.tga). The earlier Patch-A cloned-zone
+-- Renders client-side via tython_01.tre (mod TRE containing
+-- planet_crc_string_table, travel.iff, environment/tython.iff,
+-- clientregion/tython.iff, terrain/tython.trn,
+-- terrain/colorramp/tython.tga). The earlier Patch-A cloned-zone
 -- UI-rewrite (Zone::getClientZoneName/getTerrainName) was REVERTED in
 -- D6 v2 S1 -- superseded by Option T.
 -- This block MUST stay here until an upstream includeFile hook exists for
 -- planet_manager.lua (documented as rebase-conflict point in MOD_NOTES.md).
 -- Coords (3100, 18, 1600) are the temp shuttleport placement; D10 moves
 -- them to the Rebel HQ interior terminal coord.
-extraction_outpost = {
+tython = {
 	weatherEnabled = 0,
 	gcwEnabled = 0,
 

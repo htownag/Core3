@@ -2,7 +2,7 @@
 --
 -- Clones object/tangible/container/general/satchel.iff — same base as the
 -- extraction bag. Spawned by Patch-C's dropExtractionBagToCorpse at the
--- death coords when a player dies on extraction_outpost.
+-- death coords when a player dies on tython.
 --
 -- Clone-target history: first attempt cloned
 -- object_tangible_container_corpse_shared_player_corpse (vanilla

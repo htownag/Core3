@@ -1,7 +1,7 @@
 -- ExtractionMod-SWGEmu Deliverable 4: auto-grant extraction bag on zone entry.
 --
 -- Attaches ENTEREDAREA / EXITEDAREA observers to the zone ActiveArea spawned by
--- Deliverable 1 (ExtractionOutpostRegions). On first entry, grants an extraction
+-- Deliverable 1 (TythonRegions). On first entry, grants an extraction
 -- bag to the player's inventory, renames it "Extraction Pack", sets the hasBag
 -- screenplay state (informational only), and sends a system message. On exit,
 -- no-op: the bag persists in inventory off-zone and D2 S2's Rule 2
@@ -56,13 +56,13 @@ ExtractionRegionObserver = ScreenPlay:new {
 registerScreenPlay("ExtractionRegionObserver", true)
 
 function ExtractionRegionObserver:start()
-	if not isZoneEnabled("extraction_outpost") then
+	if not isZoneEnabled("tython") then
 		return
 	end
 
 	local areaOID = readData("extractpvp:zone_active_area_oid")
 	if areaOID == nil or areaOID == 0 then
-		printf("ExtractionRegionObserver: zone ActiveArea OID not found at key 'extractpvp:zone_active_area_oid'. ExtractionOutpostRegions (D1) must run first; on a fresh DB, a second server restart usually fixes screenplay start() ordering.\n")
+		printf("ExtractionRegionObserver: zone ActiveArea OID not found at key 'extractpvp:zone_active_area_oid'. TythonRegions (D1) must run first; on a fresh DB, a second server restart usually fixes screenplay start() ordering.\n")
 		return
 	end
 

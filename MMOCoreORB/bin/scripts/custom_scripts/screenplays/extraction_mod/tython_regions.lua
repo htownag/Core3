@@ -1,4 +1,4 @@
--- ExtractionMod-SWGEmu Deliverable 1: full-zone ActiveArea for extraction_outpost.
+-- ExtractionMod-SWGEmu Deliverable 1: full-zone ActiveArea for tython.
 --
 -- Hosts a single ActiveArea centered at the zone origin that later deliverables
 -- attach ENTEREDAREA / EXITEDAREA observers to (bag grant on entry, cleanup on
@@ -9,22 +9,22 @@
 -- terrain; tune during Deliverable 4's first playtest.
 --
 -- File lives at bin/scripts/custom_scripts/screenplays/extraction_mod/
--- extraction_outpost_regions.lua after sync. Loaded via
+-- tython_regions.lua after sync. Loaded via
 -- screenplays/screenplays.lua:734 → custom_scripts/screenplays/screenplays.lua.
 
-ExtractionOutpostRegions = ScreenPlay:new {
+TythonRegions = ScreenPlay:new {
 	numberOfActs = 1,
 }
 
-registerScreenPlay("ExtractionOutpostRegions", true)
+registerScreenPlay("TythonRegions", true)
 
-function ExtractionOutpostRegions:start()
-	if not isZoneEnabled("extraction_outpost") then
+function TythonRegions:start()
+	if not isZoneEnabled("tython") then
 		return
 	end
 
 	local pZoneArea = spawnActiveArea(
-		"extraction_outpost",
+		"tython",
 		"object/active_area.iff",
 		0, 0, 0,
 		6000,
