@@ -521,8 +521,21 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 
 	for (int i = 0; i < resourceEntry->getAttributeCount(); ++i) {
 		auto attrib = resourceEntry->getAttribute(i);
-		int randomValue = randomizeValue(attrib->getMinimum(),
-				attrib->getMaximum());
+		int attrMin = attrib->getMinimum();
+		int attrMax = attrib->getMaximum();
+
+		// Patch-H: tython resource stat-floor boost (D9 Tier 1.5).
+		// Custom _tython resource families get a 75%-of-max floor so
+		// harvesting is almost always worthwhile. Vanilla resource_tree.iff
+		// has zero zoneRestriction == "tython" entries; this fires only for
+		// the custom families added in D9 Tier 1.5.
+		if (resourceEntry->getZoneRestriction() == "tython") {
+			int boostedFloor = (int)(attrMax * 0.75f);
+			if (attrMin < boostedFloor)
+				attrMin = boostedFloor;
+		}
+
+		int randomValue = randomizeValue(attrMin, attrMax);
 		String attribName = attrib->getName();
 		int index = attrib->getIndex();
 		newSpawn->addAttribute(attribName, randomValue);
