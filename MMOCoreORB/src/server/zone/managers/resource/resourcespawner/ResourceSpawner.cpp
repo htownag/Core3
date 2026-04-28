@@ -45,6 +45,7 @@ ResourceSpawner::ResourceSpawner(ManagedReference<ZoneServer*> serv,
 	randomPool = new RandomPool(this);
 	nativePool = new NativePool(this);
 	manualPool = new ManualPool(this);
+	tythonPool = new TythonPool(this);  // Patch-I
 }
 
 ResourceSpawner::~ResourceSpawner() {
@@ -54,6 +55,7 @@ ResourceSpawner::~ResourceSpawner() {
 	delete randomPool;
 	delete nativePool;
 	delete manualPool;
+	delete tythonPool;  // Patch-I
 
 	delete resourceMap;
 
@@ -84,6 +86,12 @@ void ResourceSpawner::initializeRandomPool(LuaObject includes,
 void ResourceSpawner::initializeNativePool(const String& includes,
 		const String& excludes) {
 	nativePool->initialize(includes, excludes);
+}
+
+// Patch-I (D9 Tier 1.5)
+void ResourceSpawner::initializeTythonPool(const String& includes,
+		const String& excludes) {
+	tythonPool->initialize(includes, excludes);
 }
 
 void ResourceSpawner::addZone(const String& zoneName) {
@@ -197,6 +205,8 @@ void ResourceSpawner::loadResourceSpawns() {
 			case ResourcePool::MANUALPOOL:
 				manualPool->addResource(resourceSpawn, resourceSpawn->getPoolSlot());
 				break;
+			case ResourcePool::TYTHONPOOL:  // Patch-I
+				tythonPool->addResource(resourceSpawn, resourceSpawn->getPoolSlot());
 			}
 		}
 	}
@@ -369,6 +379,7 @@ void ResourceSpawner::shiftResources() {
 	nativePool->update();
 	minimumPool->update();
 	manualPool->update();
+	tythonPool->update();  // Patch-I
 
 	dumpResources();
 }
@@ -490,6 +501,15 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 		return nullptr;
 	}
 
+	// Patch-H/v2 (D9 Tier 1.5 r2): explicit zonerestriction parameter
+	// WINS over the entry's zoneRestriction (parameter overrides entry).
+	// This lets pools (e.g. TythonPool) pin a vanilla resource type to a
+	// specific planet without needing a custom IFF row. Falls back to entry's
+	// zoneRestriction if param is empty.
+	// Caveat for future callers: passing zonerestriction="X" while entry has
+	// zoneRestriction="Y" will override Y with X — make sure that's desired.
+	String effectiveZoneRestriction = !zonerestriction.isEmpty() ? zonerestriction : resourceEntry->getZoneRestriction();
+
 	String name = makeResourceName(resourceEntry->getRandomNameClass());
 
 	ResourceSpawn* newSpawn =
@@ -524,15 +544,14 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 		int attrMin = attrib->getMinimum();
 		int attrMax = attrib->getMaximum();
 
-		// Patch-H: tython resource stat-floor boost (D9 Tier 1.5).
-		// Custom _tython resource families get a 75%-of-max floor so
-		// harvesting is almost always worthwhile. Vanilla resource_tree.iff
-		// has zero zoneRestriction == "tython" entries; this fires only for
-		// the custom families added in D9 Tier 1.5.
-		if (resourceEntry->getZoneRestriction() == "tython") {
-			int boostedFloor = (int)(attrMax * 0.75f);
-			if (attrMin < boostedFloor)
-				attrMin = boostedFloor;
+		// Patch-H/v2 (D9 Tier 1.5 r2): tython spawn stat boost. Forces every
+		// attribute into the 750-1000 range when the spawn is pinned to tython
+		// (via the zonerestriction parameter or a _tython entry). TythonPool
+		// passes "tython" as zonerestriction; vanilla random/native pools that
+		// happen to spawn on tython do NOT, so they keep vanilla stat ranges.
+		if (effectiveZoneRestriction == "tython") {
+			attrMin = 750;
+			attrMax = 1000;
 		}
 
 		int randomValue = randomizeValue(attrMin, attrMax);
@@ -544,7 +563,7 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 	long expires = getRandomExpirationTime(resourceEntry);
 	newSpawn->setDespawned(expires);
 
-	newSpawn->setZoneRestriction(resourceEntry->getZoneRestriction());
+	newSpawn->setZoneRestriction(effectiveZoneRestriction);  // Patch-H/v2
 
 	newSpawn->setSurveyToolType(resourceEntry->getSurveyToolType());
 
@@ -555,7 +574,7 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 
 	newSpawn->createSpawnMaps(resourceEntry->isJTL(),
 			resourceEntry->getMinpool(), resourceEntry->getMaxpool(),
-			resourceEntry->getZoneRestriction(), activeZones);
+			effectiveZoneRestriction, activeZones);  // Patch-H/v2
 
 	if (newSpawn->isType("energy") || newSpawn->isType("radioactive"))
 		newSpawn->setIsEnergy(true);
@@ -1314,6 +1333,7 @@ String ResourceSpawner::healthCheck() {
 	health << randomPool->healthCheck() << endl;
 	health << nativePool->healthCheck() << endl;
 	health << manualPool->healthCheck() << endl;
+	health << tythonPool->healthCheck() << endl;  // Patch-I
 
 	return health.toString();
 }

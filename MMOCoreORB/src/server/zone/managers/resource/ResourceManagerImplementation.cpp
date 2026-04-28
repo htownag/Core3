@@ -140,6 +140,11 @@ bool ResourceManagerImplementation::loadConfigData() {
 	String natpoolexc = lua->getGlobalString("nativepoolexcludes");
 	resourceSpawner->initializeNativePool(natpoolinc, natpoolexc);
 
+	// Patch-I (D9 Tier 1.5): tython-only pool config
+	String tythonpoolinc = lua->getGlobalString("tythonpoolincludes");
+	String tythonpoolexc = lua->getGlobalString("tythonpoolexcludes");
+	resourceSpawner->initializeTythonPool(tythonpoolinc, tythonpoolexc);
+
 	delete lua;
 
 	return true;

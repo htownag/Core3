@@ -23,6 +23,7 @@
 #include "resourcepool/FixedPool.h"
 #include "resourcepool/RandomPool.h"
 #include "resourcepool/NativePool.h"
+#include "resourcepool/TythonPool.h"
 #include "resourcepool/ManualPool.h"
 
 namespace server {
@@ -66,6 +67,7 @@ private:
 	RandomPool* randomPool;
 	NativePool* nativePool;
 	ManualPool* manualPool;
+	TythonPool* tythonPool;  // Patch-I (D9 Tier 1.5)
 
 	bool scriptLoading;
 
@@ -84,6 +86,7 @@ public:
 	void initializeFixedPool(LuaObject includes, const String& excludes);
 	void initializeRandomPool(LuaObject includes, const String& excludes, const int size);
 	void initializeNativePool(const String& includes, const String& excludes);
+	void initializeTythonPool(const String& includes, const String& excludes);  // Patch-I
 
 	void addZone(const String& zoneName);
 	void removeZone(const String& zoneName);
@@ -165,6 +168,7 @@ private:
 	friend class ResourceTree;
 	friend class ResourceManager;
 	friend class NativePool;
+	friend class TythonPool;  // Patch-I
 };
 
 #endif /* RESOURCESPAWNER_H_ */

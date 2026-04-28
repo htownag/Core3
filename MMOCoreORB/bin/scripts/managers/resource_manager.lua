@@ -121,3 +121,17 @@ fixedpoolexcludes = ""
 nativepoolincludes = "milk_domesticated,milk_wild,meat_domesticated,meat_wild,meat_herbivore,meat_carnivore,meat_reptilian,meat_avian,meat_egg,meat_insect,seafood_fish,seafood_crustacean,seafood_mollusk,bone_mammal,bone_avian,bone_horn,hide_wooly,hide_bristley,hide_leathery,hide_scaley,corn_domesticated,corn_wild,rice_domesticated,rice_wild,oats_domesticated,oats_wild,wheat_domesticated,wheat_wild,vegetable_greens,vegetable_beans,vegetable_tubers,vegetable_fungi,fruit_fruits,fruit_berries,fruit_flowers,wood_deciduous,softwood_conifer,softwood_evergreen,energy_renewable_unlimited_solar,energy_renewable_unlimited_wind,fiberplast,water_vapor"
 nativepoolexcludes = ""
 
+
+  -- ExtractionMod-SWGEmu D9 Tier 1.5 / Patch-I — tython-only pool.
+  -- TythonPool spawns one of each <basetype>_tython type at server boot
+  -- and re-spawns when each despawns. zoneRestriction substring match in
+  -- ResourceTree::setZoneRestriction:142 ensures these only ever land on
+  -- tython. Patch-H raises attribute floors to 75% of MAX for any spawn
+  -- with zoneRestriction == "tython".
+  --
+  -- This 3-entry list is the v0.1 PROOF-OF-CONCEPT scope. Once verified
+  -- end-to-end (server boots clean + /resource list tython shows the 3
+  -- types + attributes >= 75% of declared MAX), expand to the full
+  -- ~150-entry sampleable subtype list per the D9 Tier 1.5 spec.
+tythonpoolincludes = "iron_plumbum,steel_kiirium"
+tythonpoolexcludes = ""

@@ -45,7 +45,8 @@ public:
 		RANDOMPOOL,
 		FIXEDPOOL,
 		NATIVEPOOL,
-		MANUALPOOL
+		MANUALPOOL,
+		TYTHONPOOL  // Patch-I (D9 Tier 1.5): tython-only resource pool
 	};
 
 public:
