@@ -134,7 +134,7 @@ String NativePool::healthCheck() {
 			String resourceType = spawnZone.elementAt(i).getKey();
 			ManagedReference<ResourceSpawn* > spawn = spawnZone.elementAt(i).getValue();
 
-			bool pass = spawn->isType(resourceType);
+			bool pass = (spawn != nullptr) && spawn->isType(resourceType);
 			if(!pass)
 				heathly = false;
 
