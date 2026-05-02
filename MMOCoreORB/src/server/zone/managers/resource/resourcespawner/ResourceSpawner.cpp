@@ -88,10 +88,10 @@ void ResourceSpawner::initializeNativePool(const String& includes,
 	nativePool->initialize(includes, excludes);
 }
 
-// Patch-I (D9 Tier 1.5)
+// Patch-I/v3 (D9 Tier 1.5 r3): pool size param for RandomPool-style rotation.
 void ResourceSpawner::initializeTythonPool(const String& includes,
-		const String& excludes) {
-	tythonPool->initialize(includes, excludes);
+		const String& excludes, int size) {
+	tythonPool->initialize(includes, excludes, size);
 }
 
 void ResourceSpawner::addZone(const String& zoneName) {
@@ -173,8 +173,21 @@ void ResourceSpawner::loadResourceSpawns() {
 
 					Locker locker(resourceSpawn);
 
+					// Patch-J/v1 (D9 Tier 1.5 r3): use the SPAWN's persisted
+					// zoneRestriction (set at creation time, e.g. "tython" by
+					// TythonPool) instead of the entry's IFF zoneRestriction.
+					// Without this fix, restart drops the spawn's pin: vanilla
+					// types have entry->getZoneRestriction()=="", so this call
+					// would randomly populate the spawn's zone map from
+					// activeZones, leaking Tython-boosted stats onto vanilla
+					// planets. Falling back to entry's restriction preserves
+					// existing behavior for unrestricted spawns.
+					String reconstructionZoneRestriction = resourceSpawn->getZoneRestriction();
+					if (reconstructionZoneRestriction.isEmpty())
+						reconstructionZoneRestriction = resourceEntry->getZoneRestriction();
+
 					resourceSpawn->createSpawnMaps(resourceEntry->isJTL(), minPool - spawnMapSize,
-							resourceEntry->getMaxpool() - spawnMapSize, resourceEntry->getZoneRestriction(), activeZones);
+							resourceEntry->getMaxpool() - spawnMapSize, reconstructionZoneRestriction, activeZones);
 				}
 			}
 		}
@@ -544,14 +557,26 @@ ResourceSpawn* ResourceSpawner::createResourceSpawn(const String& type,
 		int attrMin = attrib->getMinimum();
 		int attrMax = attrib->getMaximum();
 
-		// Patch-H/v2 (D9 Tier 1.5 r2): tython spawn stat boost. Forces every
-		// attribute into the 750-1000 range when the spawn is pinned to tython
-		// (via the zonerestriction parameter or a _tython entry). TythonPool
-		// passes "tython" as zonerestriction; vanilla random/native pools that
-		// happen to spawn on tython do NOT, so they keep vanilla stat ranges.
+		// Patch-H/v3 (D9 Tier 1.5 r3): tython spawn stat boost — proportional
+		// floor + max bump (0.80/1.20). Replaces v2's flat 750/1000 forcing —
+		// that was too strong for low-cap subtypes (e.g. aluminum_chromium,
+		// vanilla HR cap 530) where it forced low-tier subtypes into endgame-PVP
+		// weapon territory and inverted the vanilla resource tier hierarchy.
+		// v3 lifts the floor to 0.80*vanilla_max (preserving vanilla floor via
+		// std::max — never degrades resources whose vanilla floor exceeds 0.80
+		// of cap, e.g. polysteel_copper DR 599/700) and the ceiling to
+		// 1.20*vanilla_max (clamped at 1000). Result: high-cap subtypes get a
+		// modest floor lift only; low-cap subtypes get a proportional ~20%
+		// ceiling bump that preserves relative tiering. attrMax==0 attributes
+		// (not applicable for this class) stay at 0,0 — randomizeValue returns
+		// 0 via its explicit guard. TythonPool passes "tython" as zonerestriction;
+		// vanilla random/native pools that happen to spawn on tython do NOT,
+		// so they keep vanilla stat ranges.
 		if (effectiveZoneRestriction == "tython") {
-			attrMin = 750;
-			attrMax = 1000;
+			int vanillaMax = attrMax;
+			attrMin = std::max(attrMin, (int)(vanillaMax * 0.80f));
+			attrMax = std::min(1000, (int)(vanillaMax * 1.20f));
+			if (attrMin > attrMax) attrMin = attrMax;
 		}
 
 		int randomValue = randomizeValue(attrMin, attrMax);

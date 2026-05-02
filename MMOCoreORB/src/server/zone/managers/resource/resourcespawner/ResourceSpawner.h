@@ -86,7 +86,7 @@ public:
 	void initializeFixedPool(LuaObject includes, const String& excludes);
 	void initializeRandomPool(LuaObject includes, const String& excludes, const int size);
 	void initializeNativePool(const String& includes, const String& excludes);
-	void initializeTythonPool(const String& includes, const String& excludes);  // Patch-I
+	void initializeTythonPool(const String& includes, const String& excludes, int size);  // Patch-I/v3
 
 	void addZone(const String& zoneName);
 	void removeZone(const String& zoneName);
