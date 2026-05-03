@@ -9,3 +9,10 @@
 
 includeFile("../custom_scripts/object/extraction_mod/tangible/container/extraction_bag.lua")
 includeFile("../custom_scripts/object/extraction_mod/tangible/container/extraction_corpse.lua")
+
+-- Deliverable 11.5 — datamap quest item (clone of mission_datadisk).
+includeFile("../custom_scripts/object/extraction_mod/tangible/mission/extraction_starter_datamap.lua")
+
+-- Deliverable 11.6 — Imperial sealed datadisk (clone of mission_datadisk).
+includeFile("../custom_scripts/object/extraction_mod/tangible/mission/extraction_starter_imperial_datadisk.lua")
+

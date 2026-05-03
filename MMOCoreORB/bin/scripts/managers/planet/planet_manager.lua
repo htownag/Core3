@@ -641,7 +641,7 @@ tython = {
 	gcwEnabled = 0,
 
 	planetTravelPoints = {
-		{name = "Extraction Outpost Base", x = 3100.0, z = 18.0, y = 1600.0, interplanetaryTravelAllowed = 1, incomingTravelAllowed = 1, landingRange = 6},
+		{name = "Rebel Extraction Outpost", x = 4500.0, z = 1.9, y = -129.0, interplanetaryTravelAllowed = 1, incomingTravelAllowed = 1, landingRange = 6},
 	},
 
 	badgeAreas = {
