@@ -4,3 +4,10 @@ luacov.stats.out
 .DS_Store
 .cache
 compile_commands.json
+
+# ExtractionMod: mod overlay deploys via scripts/sync-mod.sh, source of truth
+# is the project repo at /mnt/c/Users/atlee/Projects/ExtractionMod-SWGEmu/mod-overlay/
+MMOCoreORB/bin/scripts/custom_scripts/
+
+# ExtractionMod: local backup files from staged risky operations
+*.bak-*
