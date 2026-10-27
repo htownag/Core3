@@ -1126,14 +1126,53 @@ void ResourceSpawner::sendSampleResults(TransactionLog& trx, CreatureObject* pla
 	}
 }
 
+// Patch-K/v1 (D9 Tier 1.5 r3): find the player's extraction bag if currently
+// on tython, else return nullptr. Mirror of PlayerManagerImplementation.cpp's
+// findExtractionBag helper (which is in an anonymous namespace and not
+// publicly callable from here). When this returns non-null, the caller
+// should route to the bag and set the extractpvp:planet_bound tag on the
+// container before transfer.
+SceneObject* ResourceSpawner::findExtractionBagForSample(CreatureObject* player) const {
+	if (player == nullptr)
+		return nullptr;
+
+	Zone* zone = player->getZone();
+	if (zone == nullptr || zone->getZoneName() != "tython")
+		return nullptr;
+
+	SceneObject* inventory = player->getSlottedObject("inventory");
+	if (inventory == nullptr)
+		return nullptr;
+
+	static const uint32 EXTRACTION_BAG_CRC =
+		String("object/tangible/container/extraction_bag.iff").hashCode();
+
+	int count = inventory->getContainerObjectsSize();
+	for (int i = 0; i < count; i++) {
+		SceneObject* child = inventory->getContainerObject(i);
+		if (child != nullptr && child->getServerObjectCRC() == EXTRACTION_BAG_CRC)
+			return child;
+	}
+	return nullptr;
+}
+
 bool ResourceSpawner::addResourceToPlayerInventory(TransactionLog& trx, CreatureObject* player, ResourceSpawn* resourceSpawn, int unitsExtracted) const {
-	// Add resource to inventory
+	// Patch-K/v1 (D9 Tier 1.5 r3): on tython, route to the player's extraction
+	// bag if one exists. findExtractionBagForSample returns the bag pointer if
+	// (a) player is on tython AND (b) a bag exists in inventory; nullptr
+	// otherwise. The stacking walk below scans `destination` (bag or inventory),
+	// so Tython-sampled stacks merge into bag-resident stacks instead of into
+	// any off-zone inventory stacks. The new-container branch transfers into
+	// `destination` and tags the container with extractpvp:planet_bound iff
+	// destination is the bag, mirroring D4b's Patch-F symmetry.
 	ManagedReference<SceneObject*> inventory = player->getSlottedObject("inventory");
-	Locker locker(inventory);
-	// Check inventory for resource and add if existing
-	for (int i = 0; i < inventory->getContainerObjectsSize(); ++i) {
+	SceneObject* extractionBag = findExtractionBagForSample(player);
+	SceneObject* destination = (extractionBag != nullptr) ? extractionBag : inventory.get();
+	Locker locker(destination);
+	// Check destination for resource and add if existing
+	for (int i = 0; i < destination->getContainerObjectsSize(); ++i) {
 		ManagedReference<SceneObject*> object =
-				inventory->getContainerObject(i);
+				destination->getContainerObject(i);
 
 		if (object->isResourceContainer()) {
 			ManagedReference<ResourceContainer*> resource =
@@ -1158,7 +1197,7 @@ bool ResourceSpawner::addResourceToPlayerInventory(TransactionLog& trx, Creature
 			}
 		}
 	}
-	if (unitsExtracted > 0 && inventory->isContainerFullRecursive()) {
+	if (unitsExtracted > 0 && destination->isContainerFullRecursive()) {
 		StringIdChatParameter err("survey", "no_inv_space");
 		player->sendSystemMessage(err);
 		if (!player->isIncapacitated() && !player->isDead()){
@@ -1167,18 +1206,27 @@ bool ResourceSpawner::addResourceToPlayerInventory(TransactionLog& trx, Creature
 		trx.abort() << "No inventory space";
 		return false;
 	}
-	// Create New resource container if one isn't found in inventory
+	// Create New resource container if one isn't found in destination
 	Reference<ResourceContainer*> harvestedResource = resourceSpawn->createResource(unitsExtracted);
 
 	trx.addRelatedObject(harvestedResource);
 
-	if (inventory->transferObject(harvestedResource, -1, false)) {
+	// Patch-K/v1: tag container as extraction-bound BEFORE transfer iff
+	// destination is the bag. Tag mechanism reuses D3's luaStringData key so
+	// D5 (death-corpse drop) and D6 (shuttle extract) handle this container
+	// the same way they handle tagged loot. Untagged path (bag absent) is
+	// the defensive Patch-F-Row-4 case.
+	if (extractionBag != nullptr) {
+		harvestedResource->setLuaStringData("extractpvp:planet_bound", "1");
+	}
+
+	if (destination->transferObject(harvestedResource, -1, false)) {
 		trx.addState("resourceType", resourceSpawn->getType());
 		trx.addState("resourceID", resourceSpawn->getObjectID());
 		trx.addState("resourceName", resourceSpawn->getName());
 		trx.addState("resourceQuantity", unitsExtracted);
 
-		inventory->broadcastObject(harvestedResource, true);
+		destination->broadcastObject(harvestedResource, true);
 	} else {
 		Locker resLocker(harvestedResource);
 

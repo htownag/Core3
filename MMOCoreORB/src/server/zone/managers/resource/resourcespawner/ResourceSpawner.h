@@ -126,6 +126,13 @@ public:
 	bool harvestResource(TransactionLog& trx, CreatureObject* player, ResourceSpawn* resourceSpawn, int quantity);
 	bool addResourceToPlayerInventory(TransactionLog& trx, CreatureObject* player, ResourceSpawn* resourceSpawn, int unitsExtracted) const;
 
+	// Patch-K/v1 (D9 Tier 1.5 r3): on tython, route fresh resource containers
+	// into the player's extraction bag instead of main inventory. Returns the
+	// bag SceneObject* if player is on tython AND a bag exists; nullptr
+	// otherwise. Direct mirror of Patch-F's findExtractionBag in
+	// PlayerManagerImplementation.cpp.
+	SceneObject* findExtractionBagForSample(CreatureObject* player) const;
+
 	ResourceSpawn* getCurrentSpawn(const String& restype, const String& zoneName) const;
 	ResourceSpawn* getFromRandomPool(const String& type);
 
